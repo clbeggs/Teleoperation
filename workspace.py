@@ -170,9 +170,6 @@ class Workspace():
         #Get vector from origin to our watch
         vector = vector_between_points( self.px_origin , watch_center )
         vector *= (-1)
-        print("VECTOR ------")
-        print(vector)
-        
         #Now we project this vector on two of the four sides of the workspace to measure it.
         # Dimensions go: [ 1->3 , 3->5 , 4->5 , 1->4 ]
         if( vector[1] < 0 ): #If x compenent is negative, project onto line connecting tags 1->4
@@ -194,7 +191,7 @@ class Workspace():
             y_comp_px = (1/2)*norm( vector_between_points( self.tag_corners[1][1]  , self.tag_corners[3][0] ) )
         
         fin = np.array( [(norm(x_comp)) * (x_comp_m/x_comp_px ) , (norm(y_comp)) * (y_comp_m / y_comp_px)] )
-
+        fin = self.workspace_to_sim_transform( fin )
         fin = np.array( [ fin[0] + self.sim_origin[0] , fin[1] + self.sim_origin[1] , .1 + self.sim_origin[2] ])
         return fin
     
@@ -218,10 +215,9 @@ class Workspace():
         print(x_ratio , y_ratio)
         
         if( len( coordinate) == 3 ):
-        
-            return np.array([self.sim_dimensions[0] * x_ratio , self.sim_dimensions[1] * y_ratio , coordinate[2]] ) 
+            return np.array([coordinate[0] , self.sim_dimensions[1] * y_ratio , coordinate[2]] ) 
         else:
-            return np.array([self.sim_dimensions[0] * x_ratio , self.sim_dimensions[1] * y_ratio] ) 
+            return np.array([coordinate[0] , self.sim_dimensions[1] * y_ratio] ) 
     
     def pixel_to_worspace_transform( self , coordinate ):
         """ 
