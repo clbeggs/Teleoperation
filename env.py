@@ -54,7 +54,7 @@ class Env():
         self.origin = None
         self.sim_origin = None
     
-    def measure_workspace( self , image_path ):
+    def measure_workspace( self , image_or_path ):
         """ 
         Get dimensions of workspace from 5 Aruco Tags 
         There will be one Aruco Tag in each corner, and one at the center top of the
@@ -74,11 +74,10 @@ class Env():
         https://en.wikipedia.org/wiki/Homography
         """
         #Grab corners and id's of all 5 aruco tags
-        corners , ids , image , image_cpy = self.aruco.detect_tags( image_path )
-
+        corners , ids , image , image_cpy = self.aruco.detect_tags( image_or_path )
+        
         #Put corresponding corners into aruco_tag_loc
-       
-    
+        
         for i in range( 1 , 6 ):
             id_indx = np.where(ids == i) # ids.index(i)
             id_indx = int(id_indx[0])
@@ -141,7 +140,6 @@ class Env():
         eq1 = Eq( ((5+W)*(5+W)) / (W*(W+5+5)) , cross_ratio_pixel)
         dist_cm_3_5 = max(solve(eq1,W)) #In cm, max because there it is sqrt, and sometimes are negative values
         
-        
         print("\n=============================Workspace Dimensions=============================\n")
         print("                                 {0:10f}cm                             ".format(float(dist_cm_1_3)))
         print("           ______________________________________________________     ")
@@ -171,68 +169,23 @@ class Env():
         return self.dimensions , image
     
     def px_to_cm( self , coord ):
+        """ 
+            With input in pixels, convert it to cm in the simulator
+        """
         """ TODO change so that the the point is measured from two closest vectors on square """
-        v = vector_between_points( self.aruco_tag_loc[1][0][1] , coord )
         
-        w = vector_between_points(self.aruco_tag_loc[1][0][1] , self.aruco_tag_loc[3][0][0] )
-        z = vector_between_points( self.aruco_tag_loc[1][0][2] , self.aruco_tag_loc[4][0][1] )
         
-        u = projection( v , w )
-        p = projection( v , z )
+        v = vector_between_points( self.aruco_tag_loc[1][0][1] , coord )# vector between top right of tag 1 to coordinate
+        
+        w = vector_between_points(self.aruco_tag_loc[1][0][1] , self.aruco_tag_loc[3][0][0] ) #vector between top right of tag 1 to top left of tag 3
+        z = vector_between_points( self.aruco_tag_loc[1][0][2] , self.aruco_tag_loc[4][0][1] ) # vector between bottom right of tag 1 to top right of tag 4 
+        
+        u = projection( v , w ) #x cooordinate in px
+        p = projection( v , z ) #y coordinate in px
 
         return [norm(u)*(self.dimensions[0]/norm(w)) , norm(p)*(self.dimensions[3]/norm(z)) ]
         
-    def define_sim_ws2( self , origin_m ):
-        """ 
-            Given the center point of the table in the simulator,
-            define the measured workspace in terms of coordinates in the simulator
-            Coord is origin of table in sim 
-        """
-        arr = []
-        midpt_x = (self.aruco_tag_loc[1][0][1][0] + self.aruco_tag_loc[5][0][0][0] ) + (self.aruco_tag_loc[3][0][0][0]  + self.aruco_tag_loc[4][0][1][0] ) 
-        midpt_x /= 4 
-        
-        midpt_y = (self.aruco_tag_loc[1][0][1][1] + self.aruco_tag_loc[5][0][0][1] ) + (self.aruco_tag_loc[3][0][0][1]  + self.aruco_tag_loc[4][0][1][1] )
-        midpt_y /= 4 
-        
-        origin = [ round(midpt_x) , round(midpt_y) ] #Measured origin in pixels
-        
-        dist_v = self.px_to_cm( origin ) #Distance from top right of tag 1 to origin in cm
-        dist_v = np.array(dist_v) / 100 #Convert to meters
-        dist_v[0] = dist_v[0] * (-1) #Since the origin is in the center, this vector is in the 2nd quadrant
-        arr.append(dist_v) 
-        
-        #Projection of vector from top right of tag on to origin onto the vector that connects 1 and 3
-        u = projection( origin , vector_between_points(self.aruco_tag_loc[1][0][1], self.aruco_tag_loc[3][0][0]) ) 
-        #projection of same origin vector to vector from bottom right of 1 to top right of 4
-        v = projection( origin , vector_between_points(self.aruco_tag_loc[1][0][2], self.aruco_tag_loc[4][0][1]) )
-        
-        #
-        p = np.array(u) - vector_between_points(self.aruco_tag_loc[1][0][1], self.aruco_tag_loc[3][0][0])
-        l = np.array(v) - vector_between_points(self.aruco_tag_loc[1][0][2], self.aruco_tag_loc[4][0][1])
-        
-        x = np.array(self.px_to_cm(p)) + np.array(self.px_to_cm(v))
-        y = np.array(self.px_to_cm(l)) + np.array(self.px_to_cm(u))
 
-        x = x*(-1/100) 
-        y = y / 100
-        arr.append( y )
-        t = np.array(self.px_to_cm( self.aruco_tag_loc[5][0][0] )) / 200 #Distance from top right of 1 to top left of 5 / 2
-        t[1] = t[1]*(-1)
-        arr.append( t )
-        arr.append( x )
-        print("BEFORe============================")
-        print(arr)
-        print(origin_m)
-        for i in range(4):
-            arr[i] += np.array(origin_m)
-            arr[i] = np.resize(arr[i],(3,))
-            diff = 0.54 - arr[i][2]
-            arr[i] += np.array([0,0,diff])
-        print("AFTERT============================")
-        print(arr)
-            
-        return arr
         
     def define_sim_ws( self , origin_m ):
         """ 
@@ -251,33 +204,37 @@ class Env():
         
         dist_v = self.px_to_cm( origin ) #Distance from top right of tag 1 to origin in cm
         dist_v = np.array(dist_v) / 100 #Convert to meters
-        dist_v[0] = dist_v[0] * (-1) #Since the origin is in the center, this vector is in the 2nd quadrant
+        dist_v[0] = dist_v[0]  #Since the origin is in the center, this vector is in the 2nd quadrant
         arr.append(dist_v) 
         
         bottom_left = vector_between_points( self.aruco_tag_loc[4][0][1] , origin )
         bottom_left = np.array(bottom_left) / norm(bottom_left) #turn to unit vector
         bottom_left = bottom_left *( math.sqrt( math.pow(self.dimensions[3],2) + math.pow(self.dimensions[2],2) ) / 2 )  
 
-        bottom_left[0] = bottom_left[0] * (-1)
-            
+        bottom_left[0] = -abs(bottom_left[0])
+        bottom_left[1] = abs(bottom_left[1]) 
         top_right = vector_between_points( self.aruco_tag_loc[3][0][0] , origin )
         top_right = np.array(top_right) / norm(top_right) #turn to unit vector
         top_right = top_right * ( math.sqrt( math.pow(self.dimensions[0],2) + math.pow(self.dimensions[1],2) ) / 2 )  
         top_right[0] = abs(top_right[0])
+        top_right[1] = (-1)*top_right[1]
         arr.append(top_right /100)
         arr.append(bottom_left/100)
         
-        t = np.array(self.px_to_cm( self.aruco_tag_loc[5][0][0] )) / 200 #Distance from top right of 1 to top left of 5 / 2
-        t[1] = t[1]*(-1)
-        arr.append(t)
-
+        bottom_right = np.array(self.px_to_cm( self.aruco_tag_loc[5][0][0] )) / 200 #Distance from top right of 1 to top left of 5 / 2
+        bottom_right[1] = bottom_right[1]*(-1)
+        bottom_right[0] = bottom_right[0]*(-1)
+        arr.append(bottom_right)
+        arr2 = []
         for i in range(4):
-            arr[i] = np.resize(arr[i],(3,))
-            arr[i] += np.array(origin_m)
-            
-            diff = 0.54 - arr[i][2]
-            arr[i] += np.array([0,0,diff])
-        return arr
+            arr2.append( np.array([arr[i][0] + origin_m[0], arr[i][1] + origin_m[1] , 0.54]) )
+        arr2.append( np.array([dist_v[0] + origin_m[0], dist_v[1] + origin_m[1] , 0.7]) )
+        arr2.append( np.array([bottom_left[0]/100 + origin_m[0], bottom_left[1]/100 + origin_m[1] , 0.9]) )
+        print("Top Left: " , dist_v )
+        print("Top Right: " , top_right / 100 )
+        print("Bottom Right: " , bottom_right )
+        print("Bottom Left: " , bottom_left / 100 )
+        return arr2
         
         
         
@@ -307,8 +264,66 @@ class Env():
         """ Returns distance from camera to workspace """
         pass
 
+    def track_tag( self, image_or_path , id=28 ):
+        corners , ids , image , image_cpy = self.aruco.detect_tags( image_or_path )
+        
+        return image
+    def watch_to_sim( self , image_path ):
+        """ 
+            Assuming Eagle Eye View
+            Returns x,y,z coordinates
+        """
+        corners , ids , image , _ = self.aruco.detect_tags( image_path )
+        
+        if( ids is None ):
+            return None , None
+        if( [28] not in ids ):
+            print("Watch not found in photo.")
+            return None , None
+        
+        #Get values of watch
+        watch_indx = list(ids).index([28])
+        watch_corners = corners[watch_indx][0]
+        watch_center = [ int( ( watch_corners[0][0] + watch_corners[2][0] ) / 2 ) , int( ( watch_corners[0][1] + watch_corners[2][1] ) / 2 ) ]
+        
+        """
+        print("999999999999999999999999999999999999999999999999999999999999999999999999999")
+        ia = 0 
+        for a in corners:
+            print("Corner " , a[0])
+            print("Id: " , ids[ia])
+            ia += 1
+            print("")
+        
+        print("===========================")
+        print("Watch Indx " , watch_indx)
+        print("===========================")
+        print("Watch Corners " , watch_corners )
+        print("===========================")
+        
+        print("===========================")
+        print(self.aruco_tag_loc[1][0][1] )
+        print(self.px_to_cm([self.aruco_tag_loc[1][0][1][0] + 100 , self.aruco_tag_loc[1][0][1][1] + 100] ))
+        print("999999999999999999999999999999999999999999999999999999999999999999999999999")
+        """
+        
+        watch_cm = self.px_to_cm( watch_center )
+        print("Top Left " , self.px_to_cm(  self.aruco_tag_loc[1][0][1] ))
+        print("Bottom Right " , self.px_to_cm( self.aruco_tag_loc[5][0][0] ))
+        print("Bottom Left " , self.px_to_cm( self.aruco_tag_loc[4][0][1] ))
+        print("Top Right " , self.px_to_cm( self.aruco_tag_loc[3][0][0] ))
+        print("Watch cm: " , watch_cm)
+        print( self.aruco_tag_centers )
+        print("Center " , watch_center)
+        print("\n\n")
+        watch_cm_three = np.array([self.sim_origin[0] + (watch_cm[0] / 100) , self.sim_origin[1] + (watch_cm[1] / 100) , self.sim_origin[2] + 0.2])
+        
+        #draw circle on watch
+        cv2.circle( image , tuple(watch_center) , 7 , (0, 0, 255) , 5)
+        
+        return watch_cm_three , image
 
-
+        
 
 
 

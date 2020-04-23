@@ -2,6 +2,8 @@ import numpy as np
 import cv2, PIL
 from cv2 import aruco
 
+import time
+
 
 class Detect_Aruco():
     
@@ -9,15 +11,19 @@ class Detect_Aruco():
         self.camera_matrix = np.array([[1.24461232e+03,0.00000000e+00,5.96912232e+02],[0.00000000e+00,1.25196774e+03,7.75402584e+02],[0.00000000e+00,0.00000000e+00,1.00000000e+00]])
         self.dist = np.array( [ 0.28950125 , -1.81345971 , -0.00877125 , 0.00460012 , 3.66902124] )
         
-    def detect_tags( self , image_path ):
+    def detect_tags( self , image_or_path ):
         """ Detect tag, return corners, id, and image with tags outlined """
-        image = cv2.imread( image_path )
+        if( isinstance(image_or_path,str) ):
+            image = cv2.imread( image_or_path )
+        else:
+            image = image_or_path
+            
         image = self.image_resize(image,1200,900) # resize image, maintain aspect ratio
         image_cpy = image.copy() #Unaltered image
         
         aruco_dict = aruco.Dictionary_get(aruco.DICT_5X5_50) #Aruco Tag dictionary
         parameters = aruco.DetectorParameters_create()
-        corners, ids, rejectedImgPoints = aruco.detectMarkers( image , aruco_dict , parameters=parameters ) #detect tags
+        corners, ids, _ = aruco.detectMarkers( image , aruco_dict , parameters=parameters ) #detect tags
         aruco.drawDetectedMarkers(image, corners, ids) #Draw detected tags
         #aruco.drawDetectedMarkers(image, rejectedImgPoints, borderColor=(100, 0, 240)) #Draw rejected tags
         return corners , ids , image , image_cpy
@@ -26,11 +32,13 @@ class Detect_Aruco():
         """ Draws coordinate system on every Aruco Tag, returns image, rotation and translation vector """
         
         rotation_vector , translation_vector , _ = aruco.estimatePoseSingleMarkers( corners , 0.05 , self.camera_matrix , self.dist )
-        for i in range( len(ids) ):
+        if( ids.any() == None ):
+            return image, None, None
+        for _ in range( len(ids) ):
             aruco.drawAxis( image , self.camera_matrix , self.dist , rotation_vector , translation_vector , axis_size )
             
         return image , rotation_vector , translation_vector
-        
+    
     def image_resize(self,image, width = None, height = None, inter = cv2.INTER_AREA):
         """ 
         Resize Image without distortion 
@@ -66,18 +74,60 @@ class Detect_Aruco():
         # return the resized image
         return resized
 
-
-
+    def draw_cube( self , image_or_path , aruco_id ):
+        
+        corners , ids , image , image_cpy = self.detect_tags( image_or_path )
+        #image ,  _ , _ =  self.estimate_tag_pose( image , corners, ids )
+        
+        return image
+        
+    def track_watch( self , video_path , aruco_id=28 ):
+        pass
 """
+print("HERE!!=============================")
+time.sleep(2)
 s = Detect_Aruco()
-c , i , im , im_c = s.detect_tags("./media/ar3.jpg")
-im_2 , r , t = s.estimate_tag_pose( im_c , c , i , 0.1 )
-cv2.imshow("S" , im) 
+vidcap = cv2.VideoCapture( "./ee_test.MOV" )
+namedWin = cv2.namedWindow("Webcam", cv2.WINDOW_AUTOSIZE )
+success, frame = vidcap.read()
+cv2.imshow( "S" , frame )
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-print(c)
-print(i)
+if( not vidcap.isOpened() ):
+    print("ERROR")
+    
+font                   = cv2.FONT_HERSHEY_SIMPLEX
+bottomLeftCornerOfText = (10,500)
+fontScale              = 1
+fontColor              = (50,205,50)
+lineType               = 2
+i = 1
+
+while(True):
+    success, frame = vidcap.read()
+    
+    if( success == False ):
+        break
+    
+    im = s.draw_cube(frame , 28)
+    cv2.putText(im,'Frame: {}'.format(i), 
+    bottomLeftCornerOfText, 
+    font, 
+    fontScale,
+    fontColor,
+    lineType)
+
+    cv2.imshow("Webcam" , im )
+    i += 1
+    if( cv2.waitKey(30) >= 0):
+        break
 """
+"""
+REferences:
+
+https://www.youtube.com/watch?v=CfymgQwB_vE
+"""
+
 """ All Aruco Attributes:
 
 ['Board_create', 'CORNER_REFINE_APRILTAG', 'CORNER_REFINE_CONTOUR', 
