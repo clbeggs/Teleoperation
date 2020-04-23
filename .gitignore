@@ -1,3 +1,6 @@
 media/
 .vscode/
 __pycache__/
+.vscode/
+openpose_ref/
+op_output/
