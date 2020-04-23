@@ -58,10 +58,10 @@ def main():
     frame = W.resize_image( frame )
     c = W.get_sim_corners()
     
-    add_marker( ( c[0][0] , c[0][1] , c[0][2] + 0.1))
-    add_marker( ( c[1][0] , c[1][1] , c[1][2] + 0.2))
-    add_marker( ( c[2][0] , c[2][1] , c[2][2] + 0.3))
-    add_marker( ( c[3][0] , c[3][1] , c[3][2] + 0.4))
+    #add_marker( ( c[0][0] , c[0][1] , c[0][2] + 0.1))
+    #add_marker( ( c[1][0] , c[1][1] , c[1][2] + 0.2))
+    #add_marker( ( c[2][0] , c[2][1] , c[2][2] + 0.3))
+    #add_marker( ( c[3][0] , c[3][1] , c[3][2] + 0.4))
     
     for i in c:
         add_marker(tuple(i))
@@ -71,7 +71,7 @@ def main():
         print(i)
         
     v = W.track_watch( frame )    
-    add_marker(v)
+    #add_marker(v)
     
     if( not vidcap.isOpened() ):
         print("ERROR")
@@ -83,7 +83,7 @@ def main():
     fontColor              = (50,205,50)
     lineType               = 2
     i = 1
-    time.sleep(2)
+    input("Press Enter to continue...")
     while(True):    
         success , frame = vidcap.read()
         frame = W.resize_image( frame )
