@@ -74,6 +74,7 @@ class Workspace():
         self.corners = None
         self.sim_corners = None
         self.sim_dimensions = table_dim
+        self.curr_image = None
         #Measure workspace from photo
         self.measure_workspace( workspace_image ) 
         
@@ -119,8 +120,7 @@ class Workspace():
         cv2.line( image , tuple(self.tag_corners[3][3]) , tuple(self.tag_corners[5][0]), (0,255,0) , 2 )
         cv2.circle( image , tuple(self.px_origin) , 2 , (255,255,0) , 5 )
         
-        
-        cv2.imwrite("./media/current/workspace_image.jpg" , image) 
+        self.curr_image = image
         
     def get_corners( self ):
         """ 
@@ -192,28 +192,38 @@ class Workspace():
         
         fin = np.array( [(norm(x_comp)) * (x_comp_m/x_comp_px ) , (norm(y_comp)) * (y_comp_m / y_comp_px)] )
         fin = self.workspace_to_sim_transform( fin )
-        fin = np.array( [ fin[0] + self.sim_origin[0] , fin[1] + self.sim_origin[1] , .1 + self.sim_origin[2] ])
+        fin = np.array( [ fin[0] + self.sim_origin[0] , fin[1] + self.sim_origin[1] , .2 + self.sim_origin[2] ])
         return fin
     
-    
+    def watch_orientation( self , image_or_path , end_effector_id=28 ):
+        
+        if( image_or_path is None ):
+            return None , None , None
+        
+        else:
+            im , q , ids = self.aruco.draw_cube( image_or_path )
+            for i in range( len( q ) ):
+                if( ids[i] == [end_effector_id] ):
+                    return im , q[i]
+        return None , None , None 
+        
+        
         
     def resize_image( self , image ):
         return self.aruco.image_resize( image , 1200 , 900 )
-    
     
     def workspace_to_sim_transform( self , coordinate ):
         """ 
             Coordinate is (x,y) coordinate in measured workspace 
             Return (x,y) coordinate in simulator 
             JUST SCALING, do not add on table_origin
+            X: red, Y: green, Z: blue.
+            
         """
         # Dimensions go: [ 1->3 , 3->5 , 4->5 , 1->4 ]
         
         x_ratio = ( coordinate[0] / self.dimensions[0] )
         y_ratio = ( coordinate[1] / self.dimensions[1] )
-        print("RATIOS __-------")
-        print(x_ratio , y_ratio)
-        
         if( len( coordinate) == 3 ):
             return np.array([coordinate[0] , self.sim_dimensions[1] * y_ratio , coordinate[2]] ) 
         else:

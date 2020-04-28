@@ -4,14 +4,19 @@ import time
 import rospy
 import sys
 import os 
+from os import path
 import argparse
-from cairo_simulator import Simulator, SimObject, ASSETS_PATH
-from cairo_simulator import Sawyer
 from geometry_msgs.msg import Pose 
 from pose_detection import Pose_From_Image
 import env
 import numpy as np
 import workspace
+
+sys.path.insert( 0 , '{}/cairo_simulator/src/'.format( os.path.dirname( os.path.abspath( __file__ ) ) ) )
+from cairo_simulator.Simulator import Simulator, SimObject, ASSETS_PATH
+from cairo_simulator.Manipulators import Sawyer
+
+
 
 def add_marker( pose ):
     """ 
@@ -38,22 +43,27 @@ def populate_sim( environ , origin ):
     for i in z:
         print(i)
 
-def main():
-    ### Environment 
+
+
+
+def main( args ):    
+    
+    # Init Cairo Simulator 
     rospy.init_node("CAIRO_Sawyer_Simulator")
     table_origin = [0.6,0,0.5]
     c_sim = Simulator() # Initialize the Simulator
     table = SimObject("Table", ASSETS_PATH + 'table.sdf', (table_origin[0], table_origin[1], 0), (0, 0, 1.5708)) # Table rotated 90deg along z-axis
     sawyer_robot = Sawyer("sawyer0", 0, 0, 0.8)
+    
+    # Add marker at center of the table, will serve as the origin to the workspace
     add_marker(tuple(table_origin))
     
-    
-    
-    vidcap = cv2.VideoCapture( "./media/ee_new.MOV" )
+    #Open video.    
+    vidcap = cv2.VideoCapture( args.media[0] )
     namedWin = cv2.namedWindow("Webcam", cv2.WINDOW_AUTOSIZE )
     success, frame = vidcap.read()
     
-    
+    # Init Workspace Class
     W = workspace.Workspace( frame , [0.6,0,0.5] )
     frame = W.resize_image( frame )
     c = W.get_sim_corners()
@@ -63,16 +73,17 @@ def main():
     #add_marker( ( c[2][0] , c[2][1] , c[2][2] + 0.3))
     #add_marker( ( c[3][0] , c[3][1] , c[3][2] + 0.4))
     
+    #Add Corners of measured workspace
     for i in c:
         add_marker(tuple(i))
+        
     print("Corners ")
-
     for i in c:
         print(i)
         
-    v = W.track_watch( frame )    
     #add_marker(v)
     
+    #Check if video is opened
     if( not vidcap.isOpened() ):
         print("ERROR")
         return
@@ -83,27 +94,30 @@ def main():
     fontColor              = (50,205,50)
     lineType               = 2
     i = 1
+    
+    
+    
+    
     input("Press Enter to continue...")
+    time.sleep(3)
+    
+    
     while(True):    
-        success , frame = vidcap.read()
-        frame = W.resize_image( frame )
-        if( success == False ):
+        success , frame = vidcap.read() #Grab frame
+        frame = W.resize_image( frame ) #Reduce size of image. 
+        
+        if( success == False ): #If video has ended
             break
-        v = W.track_watch( frame )
         
+        v = W.track_watch( frame ) #Track center of watch
+        frame , quaternion = W.watch_orientation( frame ) 
         
-        if( v is not None ):
-            print("COORDS: {}".format(v))
-            #joint_config = sawyer_robot.solve_inverse_kinematics(v, [0,0,0,1])
-            #sawyer_robot.move_to_joint_pos(joint_config)
+        if( v is not None and frame is not None):
+            joint_config = sawyer_robot.solve_inverse_kinematics( v, tuple( quaternion[0] ) )
+            sawyer_robot.move_to_joint_pos(joint_config)
             if( i % 10 == 0):
                 add_marker( v )
-            cv2.putText(frame,'Frame: {}'.format(i), 
-            bottomLeftCornerOfText, 
-            font, 
-            fontScale,
-            fontColor,
-            lineType)
+            cv2.putText(frame,'Frame: {}'.format(i),  bottomLeftCornerOfText,  font,  fontScale, fontColor, lineType)
             cv2.imshow("Webcam" , frame )
             i += 1
             
@@ -114,14 +128,15 @@ def main():
  
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Teleoperation via camera with Cairosim and openpose')
-    parser.add_argument('--media' , nargs=1 , default=[] , help='Video or image location')
+    parser.add_argument('--media' , nargs=1 , default=["./media/ee_new.MOV"] , help='Video location. Types acceptedL ( .mov , .mp4 , )')
     
     args = parser.parse_args()
     
-    #if( args.media == [] ):
-      #  print("No media passed in, use \"--media\" to point to location of video" )
+    if( not path.exists( args.media[0] ) ):
+            print( "{} does not exist. ".format(args.media[0] ) )
+            raise Exception("{} not found".format(args.media[0]))
 
-    main()
+    main( args )
 
 
 

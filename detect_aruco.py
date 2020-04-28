@@ -1,7 +1,7 @@
 import numpy as np
 import cv2, PIL
 from cv2 import aruco
-
+from scipy.spatial.transform import Rotation as R
 import time
 
 
@@ -28,16 +28,24 @@ class Detect_Aruco():
         #aruco.drawDetectedMarkers(image, rejectedImgPoints, borderColor=(100, 0, 240)) #Draw rejected tags
         return corners , ids , image , image_cpy
         
-    def estimate_tag_pose( self , image , corners , ids ,  axis_size=0.2 ):
+    def estimate_tag_pose( self , image , corners , ids ,  axis_size=0.05 ):
         """ Draws coordinate system on every Aruco Tag, returns image, rotation and translation vector """
         
         rotation_vector , translation_vector , _ = aruco.estimatePoseSingleMarkers( corners , 0.05 , self.camera_matrix , self.dist )
+
         if( ids.any() == None ):
             return image, None, None
-        for _ in range( len(ids) ):
-            aruco.drawAxis( image , self.camera_matrix , self.dist , rotation_vector , translation_vector , axis_size )
+        
+        for i in range( len(ids) ):
+            aruco.drawAxis( image , self.camera_matrix , self.dist , rotation_vector[i] , translation_vector[i] , axis_size )
+        
+        # Convert rotation vectors to quaternions
+        quaternions = []
+        for v in rotation_vector:
+            r = R.from_rotvec( v )
+            quaternions.append( r.as_quat() )
             
-        return image , rotation_vector , translation_vector
+        return image , quaternions
     
     def image_resize(self,image, width = None, height = None, inter = cv2.INTER_AREA):
         """ 
@@ -74,15 +82,13 @@ class Detect_Aruco():
         # return the resized image
         return resized
 
-    def draw_cube( self , image_or_path , aruco_id ):
-        
+    def draw_cube( self , image_or_path , aruco_id=28 ):
         corners , ids , image , image_cpy = self.detect_tags( image_or_path )
-        #image ,  _ , _ =  self.estimate_tag_pose( image , corners, ids )
+        image , q =  self.estimate_tag_pose( image , corners, ids )
         
-        return image
+        return image , q , ids
         
-    def track_watch( self , video_path , aruco_id=28 ):
-        pass
+
 """
 print("HERE!!=============================")
 time.sleep(2)
