@@ -58,34 +58,31 @@ def main( args ):
     # Add marker at center of the table, will serve as the origin to the workspace
     add_marker(tuple(table_origin))
     
+    calibrate_bottom = cv2.VideoCapture( "./media/current/calibrate_bottom1.MOV" )
+    _ , calib_bottom_frame = calibrate_bottom.read()
+    
+    calibrate_top = cv2.VideoCapture( "./media/current/calibrate_top1.MOV" )
+    _ , calib_top_frame = calibrate_top.read()
+    
+    
     #Open video.    
     vidcap = cv2.VideoCapture( args.media[0] )
     namedWin = cv2.namedWindow("Webcam", cv2.WINDOW_AUTOSIZE )
     success, frame = vidcap.read()
     
     # Init Workspace Class
-    W = workspace.Workspace( frame , [0.6,0,0.5] )
+    W = workspace.Workspace( calib_bottom_frame , [0.6,0,0.5] )
     frame = W.resize_image( frame )
     c = W.get_sim_corners()
-    
-    #add_marker( ( c[0][0] , c[0][1] , c[0][2] + 0.1))
-    #add_marker( ( c[1][0] , c[1][1] , c[1][2] + 0.2))
-    #add_marker( ( c[2][0] , c[2][1] , c[2][2] + 0.3))
-    #add_marker( ( c[3][0] , c[3][1] , c[3][2] + 0.4))
-    
+    W.calibrate_top( calib_top_frame )
+
     #Add Corners of measured workspace
     for i in c:
         add_marker(tuple(i))
-        
-    print("Corners ")
-    for i in c:
-        print(i)
-        
-    #add_marker(v)
     
     #Check if video is opened
     if( not vidcap.isOpened() ):
-        print("ERROR")
+        print("ERROR, video not opened")
         return
     
     font                   = cv2.FONT_HERSHEY_SIMPLEX
@@ -96,27 +93,29 @@ def main( args ):
     i = 1
     
     
-    
-    
     input("Press Enter to continue...")
     time.sleep(3)
     
     
     while(True):    
         success , frame = vidcap.read() #Grab frame
-        frame = W.resize_image( frame ) #Reduce size of image. 
         
-        if( success == False ): #If video has ended
+        if( (not success) or ( frame is None)): #If video has ended
             break
         
-        v = W.track_watch( frame ) #Track center of watch
-        frame , quaternion = W.watch_orientation( frame ) 
+        frame = W.resize_image( frame ) #Reduce size of image. 
+        watch_center = W.track_watch( frame ) #Track center of watch
         
-        if( v is not None and frame is not None):
-            joint_config = sawyer_robot.solve_inverse_kinematics( v, tuple( quaternion[0] ) )
-            sawyer_robot.move_to_joint_pos(joint_config)
+        
+        
+        if( watch_center is not None and frame is not None):
+            watch_center = np.array( [ watch_center[0] , watch_center[1] , .62 + .6*W.watch_height(frame) ] )
+            frame , quaternion = W.watch_orientation( frame ) 
+            #joint_config = sawyer_robot.solve_inverse_kinematics( watch_center, tuple( [0,0.707,0.707,0.] ) )
+            #sawyer_robot.move_to_joint_pos(joint_config)
+            print("Watch Center: {}".format(watch_center))
             if( i % 10 == 0):
-                add_marker( v )
+                add_marker( watch_center )
             cv2.putText(frame,'Frame: {}'.format(i),  bottomLeftCornerOfText,  font,  fontScale, fontColor, lineType)
             cv2.imshow("Webcam" , frame )
             i += 1
@@ -128,7 +127,7 @@ def main( args ):
  
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Teleoperation via camera with Cairosim and openpose')
-    parser.add_argument('--media' , nargs=1 , default=["./media/ee_new.MOV"] , help='Video location. Types acceptedL ( .mov , .mp4 , )')
+    parser.add_argument('--media' , nargs=1 , default=["./media/current/move_top_TEST.MOV"] , help='Video location. Types acceptedL ( .mov , .mp4 , more stuff )')
     
     args = parser.parse_args()
     

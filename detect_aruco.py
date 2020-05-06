@@ -89,47 +89,9 @@ class Detect_Aruco():
         return image , q , ids
         
 
-"""
-print("HERE!!=============================")
-time.sleep(2)
-s = Detect_Aruco()
-vidcap = cv2.VideoCapture( "./ee_test.MOV" )
-namedWin = cv2.namedWindow("Webcam", cv2.WINDOW_AUTOSIZE )
-success, frame = vidcap.read()
-cv2.imshow( "S" , frame )
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-if( not vidcap.isOpened() ):
-    print("ERROR")
-    
-font                   = cv2.FONT_HERSHEY_SIMPLEX
-bottomLeftCornerOfText = (10,500)
-fontScale              = 1
-fontColor              = (50,205,50)
-lineType               = 2
-i = 1
 
-while(True):
-    success, frame = vidcap.read()
-    
-    if( success == False ):
-        break
-    
-    im = s.draw_cube(frame , 28)
-    cv2.putText(im,'Frame: {}'.format(i), 
-    bottomLeftCornerOfText, 
-    font, 
-    fontScale,
-    fontColor,
-    lineType)
-
-    cv2.imshow("Webcam" , im )
-    i += 1
-    if( cv2.waitKey(30) >= 0):
-        break
 """
-"""
-REferences:
+References:
 
 https://www.youtube.com/watch?v=CfymgQwB_vE
 """

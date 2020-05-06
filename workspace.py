@@ -5,7 +5,6 @@ from sympy import symbols, Eq, solve
 import math
 
 
-
 def vector_between_points( x , y ):
     """ Vectors from x -> y """
     return np.array( [ y[0] - x[0] , y[1] - x[1] ] )
@@ -75,6 +74,9 @@ class Workspace():
         self.sim_corners = None
         self.sim_dimensions = table_dim
         self.curr_image = None
+        self.bottom_image = None
+        self.top_image = None
+        self.bottom_end_effector_corners = None
         #Measure workspace from photo
         self.measure_workspace( workspace_image ) 
         
@@ -88,7 +90,7 @@ class Workspace():
         Given image or cv2 image, measure workspace dimensions
         Origin is center of workspace.
         """
-        
+        self.bottom_image = image_or_path
         # Get Aruco Tags
         corners , ids , image , _ = self.aruco.detect_tags( image_or_path )
         
@@ -100,6 +102,11 @@ class Workspace():
         #Get origin in pixels using midpoint formula
         self.px_origin = [ ( (self.tag_corners[1][2][0] + self.tag_corners[5][0][0])/2 + (self.tag_corners[3][3][0] + self.tag_corners[4][1][0])/2 ) / 2 , ( (self.tag_corners[1][2][1] + self.tag_corners[5][0][1])/2 + (self.tag_corners[3][3][1] + self.tag_corners[4][1][1])/2 ) / 2 ]
         self.px_origin = [ int(self.px_origin[0]) , int(self.px_origin[1]) ] 
+        
+        if( [28] in ids ):
+            id_indx = list(ids).index([28])
+            self.bottom_end_effector_corners = corners[id_indx][0]
+            
         
         
         #Get size of workspace with homography, specifically cross ratio, for each side.
@@ -196,7 +203,18 @@ class Workspace():
         return fin
     
     def watch_orientation( self , image_or_path , end_effector_id=28 ):
+        """
+        Here, you transform 3D points expressed in the tag frame into the camera frame:
+        https://answers.opencv.org/question/215377/aruco-orientation-using-the-function-arucoestimateposesinglemarkers/
         
+        The camera pose with respect to a marke r is the 3d transformation from the marker coordinate system to the 
+        camera coordinate system. It is specified by rotation and translation vectors 
+        
+        
+        [ 0 , 0.707 , 0.707 , 0 ] is the correct quaternion for the entire demo video. right to left
+        [ 0 , 0.707 , 0 , 0.707 ] is direction from closest point of table to end of table
+            
+        """
         if( image_or_path is None ):
             return None , None , None
         
@@ -206,6 +224,73 @@ class Workspace():
                 if( ids[i] == [end_effector_id] ):
                     return im , q[i]
         return None , None , None 
+    
+    def calibrate_top( self , image_or_path ):
+        """
+            Grab info from image at top of workspace. 
+            
+        """ 
+        self.top_image = image_or_path 
+        corners , top_ids , im_test , _ = self.aruco.detect_tags( self.top_image ) #Top image
+        
+        self.top_corners = None
+        
+        
+        if( [28] in top_ids ):
+            id_indx = list(top_ids).index( [28] )
+            self.top_corners = corners[id_indx][0]
+        
+    def watch_height( self , image_or_path , camera_height=1 , end_effector_id=28 ):
+        """ 
+            Get height of the aruco tag.
+            
+            Methods:
+                - Just need height of camera at recording.
+                ROUGHLY 0.96 meters
+        """
+        
+        corners , ids , image , _ = self.aruco.detect_tags( image_or_path ) #Top image
+        
+        curr_corners = dict()
+        
+        for i in range( 1 , 6 ):
+            if( [i] in ids ):
+                id_indx = list(ids).index( [i] )
+                curr_corners[i] = corners[id_indx][0][0] #Store tag corners
+                
+        curr_end_corners = None
+        if( [28] in ids ):
+            id_indx = list(ids).index( [28] )
+            curr_end_corners = corners[id_indx][0]
+            
+        #For now we will just measure the top left corner as a rough estimate. Pretty Hardcoded. This can be improved in the future.
+        # [ TopLeft -> TopRight , TopRight -> BottomRight , BottomRight -> BottomLeft , BottomLeft -> TopLeft ]
+        bottom , top , current = [] , [] , []
+        print(curr_end_corners)
+        for i in range(3):
+            if( len(curr_end_corners) > 0  ):
+                bottom.append( euclid_distance( self.bottom_end_effector_corners[i] , self.bottom_end_effector_corners[i+1] ) )
+                top.append( euclid_distance( self.top_corners[i] , self.top_corners[i+1] ) )
+                current.append( euclid_distance( curr_end_corners[i] , curr_end_corners[i+1] ) )
+
+        
+        # Square length size of 300px - bottom - Corresponds to .06 in sim
+        # Square length size of 700px - top - Corresponds to ( .06 + 1 ) in sim 
+        # Now we get a square length size of 450px, how do we get height?
+        # 700 - 300 = 400 , 300 - 300 = 0 , 450 - 300 = 150.
+        # 150 is 37.5 percent of 300. So we know that pixel size of 450 corresponds to 37.5 percent distance from bottom to top! Bam. 
+        # I'm sure there are better and more accurate ways to do this but I have 4 final tests I have to study for. 
+        ratio = []
+        
+        for i in range(len(current)):
+            ratio.append( (current[i] - bottom[i]) / top[i] )
+        print("RATIOOOOOOO==============================")
+        print(ratio)
+        print(np.average(ratio))
+        print(np.average(ratio) % 1)
+        return np.average(ratio) 
+        
+        
         
         
         
