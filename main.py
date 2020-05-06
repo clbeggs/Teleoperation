@@ -113,7 +113,7 @@ def main( args ):
             frame , quaternion = W.watch_orientation( frame ) 
             #joint_config = sawyer_robot.solve_inverse_kinematics( watch_center, tuple( [0,0.707,0.707,0.] ) )
             #sawyer_robot.move_to_joint_pos(joint_config)
-            print("Watch Center: {}".format(watch_center))
+            #print("Watch Center: {}".format(watch_center))
             if( i % 10 == 0):
                 add_marker( watch_center )
             cv2.putText(frame,'Frame: {}'.format(i),  bottomLeftCornerOfText,  font,  fontScale, fontColor, lineType)

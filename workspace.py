@@ -284,10 +284,6 @@ class Workspace():
         
         for i in range(len(current)):
             ratio.append( (current[i] - bottom[i]) / top[i] )
-        print("RATIOOOOOOO==============================")
-        print(ratio)
-        print(np.average(ratio))
-        print(np.average(ratio) % 1)
         return np.average(ratio) 
         
         
