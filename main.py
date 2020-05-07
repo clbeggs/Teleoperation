@@ -40,8 +40,6 @@ def populate_sim( environ , origin ):
     z = environ.define_sim_ws(np.array(origin))
     for i in z:
         add_marker(i)
-    for i in z:
-        print(i)
 
 
 
@@ -109,10 +107,10 @@ def main( args ):
         
         
         if( watch_center is not None and frame is not None):
-            watch_center = np.array( [ watch_center[0] , watch_center[1] , .62 + .6*W.watch_height(frame) ] )
+            watch_center = np.array( [ watch_center[0] , watch_center[1] , .64 + .6*W.watch_height(frame) ] )
             frame , quaternion = W.watch_orientation( frame ) 
-            #joint_config = sawyer_robot.solve_inverse_kinematics( watch_center, tuple( [0,0.707,0.707,0.] ) )
-            #sawyer_robot.move_to_joint_pos(joint_config)
+            joint_config = sawyer_robot.solve_inverse_kinematics( watch_center, tuple( [0,0.707,0.707,0.] ) )
+            sawyer_robot.move_to_joint_pos(joint_config)
             #print("Watch Center: {}".format(watch_center))
             if( i % 10 == 0):
                 add_marker( watch_center )
@@ -127,7 +125,7 @@ def main( args ):
  
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Teleoperation via camera with Cairosim and openpose')
-    parser.add_argument('--media' , nargs=1 , default=["./media/current/move_top_TEST.MOV"] , help='Video location. Types acceptedL ( .mov , .mp4 , more stuff )')
+    parser.add_argument('--media' , nargs=1 , default=["./media/current/move_bottom_TEST.MOV"] , help='Video location. Types acceptedL ( .mov , .mp4 , more stuff )')
     
     args = parser.parse_args()
     

@@ -266,7 +266,6 @@ class Workspace():
         #For now we will just measure the top left corner as a rough estimate. Pretty Hardcoded. This can be improved in the future.
         # [ TopLeft -> TopRight , TopRight -> BottomRight , BottomRight -> BottomLeft , BottomLeft -> TopLeft ]
         bottom , top , current = [] , [] , []
-        print(curr_end_corners)
         for i in range(3):
             if( len(curr_end_corners) > 0  ):
                 bottom.append( euclid_distance( self.bottom_end_effector_corners[i] , self.bottom_end_effector_corners[i+1] ) )
