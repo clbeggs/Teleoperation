@@ -8,12 +8,13 @@ Building a way to teleoperate a robot via two cameras to more intuively operate 
 
 
 
-## Dependencies:
+## How to run:
 
 The setup.sh file will clone the cairo simulator.
  
 1. `chmod +x setup.sh`
 2. `./setup.sh`
+3. python main.py --media <VIDEO>
 
 
 
