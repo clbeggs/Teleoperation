@@ -25,6 +25,7 @@ The setup.sh file will clone the cairo simulator.
 
 ### How can it improve
 - Adding generality, right now there are some hard constants that need to be met for the project to work, camera with a birds eye view which is ideally normal to the workspace.
+- Add real time capabilites, currently with no external webcam I am unable to stream video to my laptop, and IPhone apps cost money. 
 - Using a single Intel RealSense Depth Camera to accurately capture depth data. Only issue with this is finding the orientation of the end effector accurately.
 - Using a LeapMotion VR camera, and just caring about hand poses, super accurate camera but only within a small distance, would only be practical in applications where the workspace is very small and allows for a close camera.
 - Better GPU, Openpose, and FLIR or multiple RGB cameras. With A better GPU I could access the features that require more memory, and with mutiple cameras or a FLIR camera, a 3D pose could be extracted and used. 
