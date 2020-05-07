@@ -125,7 +125,7 @@ def main( args ):
  
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Teleoperation via camera with Cairosim and openpose')
-    parser.add_argument('--media' , nargs=1 , default=["./media/current/move_top_TEST.MOV"] , help='Video location. Types acceptedL ( .mov , .mp4 , more stuff )')
+    parser.add_argument('--media' , nargs=1 , default=["./media/current/move_top_TEST.MOV"] , help='Video location. Types accepted ( .mov , .mp4 , more stuff )')
     
     args = parser.parse_args()
     
