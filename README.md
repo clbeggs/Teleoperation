@@ -1,10 +1,19 @@
-## Teleoperation of Sawyer with Cairo Sim and Aruco Tags via Camera
+# Teleoperation of Sawyer with Cairo Sim and Aruco Tags via Camera
 
 Building a way to teleoperate a robot via two cameras to more intuively operate a robot. 
 
 
+This project uses OpenCV2, Cairo Simulator, and Aruco Tags to teleoperate a sawyer robot with a single eagle eye camera.
+
+
+
+
+--- 
+
+
 
 <img src="./display/demo2.gif"/>
+
 
 
 
